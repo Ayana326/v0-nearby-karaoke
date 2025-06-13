@@ -1,3 +1,60 @@
+# A-Team News SiteAdd commentMore actions
+
+## プロジェクト概要
+A-Team News Siteは、ニュース記事を表示し、報道内容の比較や思想傾向の分析を行うためのNext.jsベースのウェブアプリケーションです。
+
+## 必要な環境
+- Node.js (推奨バージョン: 16.x以上)
+- npm または yarn
+
+## セットアップ手順
+1. リポジトリをクローンします。
+   ```bash
+   git clone <リポジトリURL>
+   ```
+2. プロジェクトディレクトリに移動します。
+   ```bash
+   cd a-team-news-site
+   ```
+3. 依存関係をインストールします。
+   ```bash
+   npm install
+   # または
+   yarn install
+   ```
+
+## 開発サーバーの起動
+以下のコマンドでローカル開発サーバーを起動できます。
+```bash
+npm run dev
+# または
+yarn dev
+```
+ブラウザで `http://localhost:3000` を開いてアプリケーションを確認してください。
+
+## デプロイ方法
+1. プロダクションビルドを作成します。
+   ```bash
+   npm run build
+   # または
+   yarn build
+   ```
+2. ビルド後、以下のコマンドでアプリケーションを起動します。
+   ```bash
+   npm start
+   # または
+   yarn start
+   ```
+
+## プロジェクト構造
+```
+public/       # 静的ファイル (画像やアイコンなど)
+src/          # ソースコード
+  app/        # ページとレイアウト
+  components/ # 再利用可能なUIコンポーネント
+  lib/        # ユーティリティ関数やデータ
+```
+
 # Nearby karaoke website
 
 *Automatically synced with your [v0.dev](https://v0.dev) deployments*
