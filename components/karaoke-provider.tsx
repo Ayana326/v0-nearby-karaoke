@@ -9,15 +9,21 @@ export type KaraokePlace = {
   id: string
   name: string
   address: string
-  price: number // 30分あたりの基本料金
+  price: number // 30分あたりの基本料金（一般料金）
+  memberDiscountRate: number // 会員割引率（0.0～1.0）
   freeTimePriceWeekday: number | null // 平日フリータイム料金（nullの場合はフリータイムなし）
   freeTimePriceWeekend: number | null // 休日フリータイム料金（nullの場合はフリータイムなし）
   studentDiscountRate: number // 学割割引率（0.0～1.0）
   distance?: number // メートル単位
+  walkingTime?: number // 徒歩時間（分）
   position: [number, number] // [緯度, 経度]
   rating: number
   openNow: boolean
-  calculatedPrice?: number // 条件に基づいて計算された予想料金
+  calculatedPrices?: {
+    regular: number // 一般料金
+    student: number // 学生料金
+    member: number // 会員料金
+  }
 }
 
 // モックデータ（実際のアプリではAPIから取得）
@@ -27,6 +33,7 @@ const mockKaraokePlaces: KaraokePlace[] = [
     name: "カラオケ ビッグエコー 渋谷センター街店",
     address: "東京都渋谷区宇田川町25-5",
     price: 400, // 30分あたり
+    memberDiscountRate: 0.1, // 会員10%オフ
     freeTimePriceWeekday: 1500, // 平日フリータイム
     freeTimePriceWeekend: 2000, // 休日フリータイム
     studentDiscountRate: 0.2, // 学割20%オフ
@@ -39,6 +46,7 @@ const mockKaraokePlaces: KaraokePlace[] = [
     name: "カラオケ館 渋谷本店",
     address: "東京都渋谷区宇田川町23-4",
     price: 350,
+    memberDiscountRate: 0.15, // 会員15%オフ
     freeTimePriceWeekday: 1400,
     freeTimePriceWeekend: 1900,
     studentDiscountRate: 0.3, // 学割30%オフ
@@ -51,6 +59,7 @@ const mockKaraokePlaces: KaraokePlace[] = [
     name: "カラオケの鉄人 渋谷道玄坂店",
     address: "東京都渋谷区道玄坂2-29-8",
     price: 300,
+    memberDiscountRate: 0.2, // 会員20%オフ
     freeTimePriceWeekday: 1300,
     freeTimePriceWeekend: 1800,
     studentDiscountRate: 0.2,
@@ -63,6 +72,7 @@ const mockKaraokePlaces: KaraokePlace[] = [
     name: "ジョイカラ 渋谷店",
     address: "東京都渋谷区宇田川町36-6",
     price: 450,
+    memberDiscountRate: 0.05, // 会員5%オフ
     freeTimePriceWeekday: 1600,
     freeTimePriceWeekend: 2200,
     studentDiscountRate: 0.1, // 学割10%オフ
@@ -75,6 +85,7 @@ const mockKaraokePlaces: KaraokePlace[] = [
     name: "カラオケパセラ 渋谷店",
     address: "東京都渋谷区宇田川町26-5",
     price: 500,
+    memberDiscountRate: 0.15, // 会員15%オフ
     freeTimePriceWeekday: 1800,
     freeTimePriceWeekend: 2500,
     studentDiscountRate: 0.25, // 学割25%オフ
@@ -97,8 +108,12 @@ type KaraokeContextType = {
   setStayDuration: (duration: number) => void
   isStudent: boolean // 学生かどうか
   setIsStudent: (isStudent: boolean) => void
+  isMember: boolean // 会員かどうか
+  setIsMember: (isMember: boolean) => void
   isWeekend: boolean // 休日かどうか
   calculatePrices: () => void // 料金計算関数
+  priceType: "regular" | "student" | "member" // 表示する料金タイプ
+  setPriceType: (type: "regular" | "student" | "member") => void
 }
 
 const KaraokeContext = createContext<KaraokeContextType | undefined>(undefined)
@@ -112,6 +127,8 @@ export function KaraokeProvider({ children }: { children: React.ReactNode }) {
   const [sortBy, setSortBy] = useState<"distance" | "price" | "calculatedPrice">("distance")
   const [stayDuration, setStayDuration] = useState<number>(120) // デフォルト2時間
   const [isStudent, setIsStudent] = useState<boolean>(false)
+  const [isMember, setIsMember] = useState<boolean>(false)
+  const [priceType, setPriceType] = useState<"regular" | "student" | "member">("regular")
 
   // 現在の曜日が休日（土日）かどうかを判定
   const today = new Date()
@@ -145,14 +162,19 @@ export function KaraokeProvider({ children }: { children: React.ReactNode }) {
     if (userLocation) {
       // 実際のアプリではここでAPIリクエストを行う
       // 今回はモックデータを使用
-      const placesWithDistance = mockKaraokePlaces.map((place) => ({
-        ...place,
-        distance: calculateDistance(userLocation[0], userLocation[1], place.position[0], place.position[1]),
-      }))
+      const placesWithDistanceAndTime = mockKaraokePlaces.map((place) => {
+        const distance = calculateDistance(userLocation[0], userLocation[1], place.position[0], place.position[1])
+        const walkingTime = calculateWalkingTime(distance)
 
-      setKaraokePlaces(placesWithDistance)
+        return {
+          ...place,
+          distance,
+          walkingTime,
+        }
+      })
+
+      setKaraokePlaces(placesWithDistanceAndTime)
       setLoading(false)
-      // Don't call calculatePrices() here, it will be triggered by the other useEffect
     }
   }, [userLocation])
 
@@ -165,31 +187,36 @@ export function KaraokeProvider({ children }: { children: React.ReactNode }) {
         // フリータイム料金（平日/休日に応じて）
         const freeTimePrice = isWeekend ? place.freeTimePriceWeekend : place.freeTimePriceWeekday
 
-        // 30分ごとの料金計算
+        // 30分ごとの料金計算（一般料金）
         const timeBasedPrice = Math.ceil(stayDuration / 30) * place.price
 
-        // フリータイムと30分ごとの料金を比較して安い方を選択
-        let finalPrice = freeTimePrice !== null && freeTimePrice < timeBasedPrice ? freeTimePrice : timeBasedPrice
+        // フリータイムと30分ごとの料金を比較して安い方を選択（一般料金）
+        const regularPrice = freeTimePrice !== null && freeTimePrice < timeBasedPrice ? freeTimePrice : timeBasedPrice
 
-        // 学割適用
-        if (isStudent) {
-          finalPrice = finalPrice * (1 - place.studentDiscountRate)
-        }
+        // 学生料金計算
+        const studentPrice = Math.round(regularPrice * (1 - place.studentDiscountRate))
+
+        // 会員料金計算
+        const memberPrice = Math.round(regularPrice * (1 - place.memberDiscountRate))
 
         return {
           ...place,
-          calculatedPrice: Math.round(finalPrice),
+          calculatedPrices: {
+            regular: regularPrice,
+            student: studentPrice,
+            member: memberPrice,
+          },
         }
       })
     })
-  }, [stayDuration, isStudent, isWeekend]) // Remove karaokePlaces from dependencies
+  }, [stayDuration, isWeekend])
 
-  // 滞在時間または学生状態が変更されたら料金を再計算
+  // 滞在時間が変更されたら料金を再計算
   useEffect(() => {
     if (karaokePlaces.length > 0) {
       calculatePrices()
     }
-  }, [stayDuration, isStudent]) // Remove calculatePrices from dependencies
+  }, [stayDuration])
 
   // 距離計算関数（ヘイバーサイン公式）
   function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -204,6 +231,12 @@ export function KaraokeProvider({ children }: { children: React.ReactNode }) {
     const d = R * c
 
     return Math.round(d) // メートル単位で四捨五入
+  }
+
+  // 徒歩時間計算関数（平均歩行速度を時速4kmとして計算）
+  function calculateWalkingTime(distanceInMeters: number): number {
+    const walkingSpeedMetersPerMinute = 4000 / 60 // 時速4kmを分速に変換
+    return Math.ceil(distanceInMeters / walkingSpeedMetersPerMinute) // 切り上げて分単位で返す
   }
 
   return (
@@ -221,8 +254,12 @@ export function KaraokeProvider({ children }: { children: React.ReactNode }) {
         setStayDuration,
         isStudent,
         setIsStudent,
+        isMember,
+        setIsMember,
         isWeekend,
         calculatePrices,
+        priceType,
+        setPriceType,
       }}
     >
       {children}

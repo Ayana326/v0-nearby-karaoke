@@ -7,12 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Calculator, Clock } from "lucide-react"
+import { Calculator, Clock, BadgePercent } from "lucide-react"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export default function PriceCalculator() {
-  const { stayDuration, setStayDuration, isStudent, setIsStudent, isWeekend, setSortBy } = useKaraoke()
+  const {
+    stayDuration,
+    setStayDuration,
+    isStudent,
+    setIsStudent,
+    isMember,
+    setIsMember,
+    isWeekend,
+    setSortBy,
+    priceType,
+    setPriceType,
+  } = useKaraoke()
+
   const [localDuration, setLocalDuration] = useState(stayDuration)
   const [localIsStudent, setLocalIsStudent] = useState(isStudent)
+  const [localIsMember, setLocalIsMember] = useState(isMember)
+  const [localPriceType, setLocalPriceType] = useState<"regular" | "student" | "member">(priceType)
 
   // 時間を「時間:分」形式で表示
   const formatDuration = (minutes: number) => {
@@ -25,6 +40,8 @@ export default function PriceCalculator() {
   const handleApply = () => {
     setStayDuration(localDuration)
     setIsStudent(localIsStudent)
+    setIsMember(localIsMember)
+    setPriceType(localPriceType)
     setSortBy("calculatedPrice") // 計算された料金でソート
   }
 
@@ -61,11 +78,69 @@ export default function PriceCalculator() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="student-mode" className="cursor-pointer">
-              学生割引を適用する
+          <div className="space-y-3">
+            <Label className="flex items-center mb-2">
+              <BadgePercent className="mr-2 h-4 w-4" />
+              割引オプション
             </Label>
-            <Switch id="student-mode" checked={localIsStudent} onCheckedChange={setLocalIsStudent} />
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="student-mode" className="cursor-pointer">
+                学生割引を適用する
+              </Label>
+              <Switch
+                id="student-mode"
+                checked={localIsStudent}
+                onCheckedChange={(checked) => {
+                  setLocalIsStudent(checked)
+                  if (checked) setLocalIsMember(false) // 学生と会員は同時に選択できない
+                  if (checked) setLocalPriceType("student")
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="member-mode" className="cursor-pointer">
+                会員割引を適用する
+              </Label>
+              <Switch
+                id="member-mode"
+                checked={localIsMember}
+                onCheckedChange={(checked) => {
+                  setLocalIsMember(checked)
+                  if (checked) setLocalIsStudent(false) // 会員と学生は同時に選択できない
+                  if (checked) setLocalPriceType("member")
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="block mb-2">表示する料金タイプ</Label>
+            <RadioGroup
+              value={localPriceType}
+              onValueChange={(value) => setLocalPriceType(value as "regular" | "student" | "member")}
+              className="flex space-x-2"
+            >
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="regular" id="regular" />
+                <Label htmlFor="regular" className="text-sm">
+                  一般
+                </Label>
+              </div>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="student" id="student" />
+                <Label htmlFor="student" className="text-sm">
+                  学生
+                </Label>
+              </div>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="member" id="member" />
+                <Label htmlFor="member" className="text-sm">
+                  会員
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded">

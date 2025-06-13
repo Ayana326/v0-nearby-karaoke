@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useKaraoke } from "./karaoke-provider"
-import { MapPin, Navigation } from "lucide-react"
+import { MapPin, Navigation, Clock } from "lucide-react"
 
 interface SimpleMapProps {
   width: number
@@ -10,7 +10,7 @@ interface SimpleMapProps {
 }
 
 export default function SimpleMap({ width, height }: SimpleMapProps) {
-  const { userLocation, karaokePlaces, selectedPlace, setSelectedPlace } = useKaraoke()
+  const { userLocation, karaokePlaces, selectedPlace, setSelectedPlace, priceType } = useKaraoke()
   const mapRef = useRef<HTMLDivElement>(null)
   const [hoveredPlace, setHoveredPlace] = useState<string | null>(null)
 
@@ -84,21 +84,34 @@ export default function SimpleMap({ width, height }: SimpleMapProps) {
 
   // Get price color based on calculated price
   const getPriceColor = (place: (typeof karaokePlaces)[0]) => {
-    if (!place.calculatedPrice) return "text-purple-600"
+    if (!place.calculatedPrices) return "text-purple-600"
 
-    const prices = karaokePlaces.filter((p) => p.calculatedPrice).map((p) => p.calculatedPrice as number)
+    const selectedPrice = place.calculatedPrices[priceType]
+    const prices = karaokePlaces.filter((p) => p.calculatedPrices).map((p) => p.calculatedPrices![priceType])
 
     const minPrice = Math.min(...prices)
     const maxPrice = Math.max(...prices)
     const range = maxPrice - minPrice
 
-    if (place.calculatedPrice === minPrice) return "text-green-600"
+    if (selectedPrice === minPrice) return "text-green-600"
     if (range === 0) return "text-purple-600"
 
-    const ratio = (place.calculatedPrice - minPrice) / range
+    const ratio = (selectedPrice - minPrice) / range
     if (ratio < 0.33) return "text-green-500"
     if (ratio < 0.66) return "text-yellow-500"
     return "text-red-500"
+  }
+
+  // 料金タイプに応じたラベルを取得
+  const getPriceTypeLabel = () => {
+    switch (priceType) {
+      case "student":
+        return "学生"
+      case "member":
+        return "会員"
+      default:
+        return "一般"
+    }
   }
 
   if (!positions || Object.keys(positions).length === 0) {
@@ -174,11 +187,16 @@ export default function SimpleMap({ width, height }: SimpleMapProps) {
                 <p className="text-gray-600 truncate">{place.address}</p>
                 <div className="flex justify-between mt-1">
                   <span>{place.price}円/30分</span>
-                  {place.calculatedPrice && <span className={priceColor}>{place.calculatedPrice}円</span>}
+                  {place.calculatedPrices && (
+                    <span className={priceColor}>
+                      {place.calculatedPrices[priceType]}円<span className="text-xs ml-1">({getPriceTypeLabel()})</span>
+                    </span>
+                  )}
                 </div>
-                {place.distance && (
-                  <p className="text-gray-600 mt-1">
-                    約{place.distance < 1000 ? `${place.distance}m` : `${(place.distance / 1000).toFixed(1)}km`}
+                {place.walkingTime && (
+                  <p className="text-gray-600 mt-1 flex items-center">
+                    <Clock className="h-3 w-3 mr-1" />
+                    徒歩約{place.walkingTime}分
                   </p>
                 )}
               </div>
