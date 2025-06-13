@@ -1,7 +1,9 @@
-# A-Team News SiteAdd commentMore actions
+# Nearby karaoke website
 
-## プロジェクト概要
-A-Team News Siteは、ニュース記事を表示し、報道内容の比較や思想傾向の分析を行うためのNext.jsベースのウェブアプリケーションです。
+*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/ayana326s-projects/v0-nearby-karaoke-website)
+[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/VmDRHUhMeRz)
 
 ## 必要な環境
 - Node.js (推奨バージョン: 16.x以上)
@@ -54,13 +56,6 @@ src/          # ソースコード
   components/ # 再利用可能なUIコンポーネント
   lib/        # ユーティリティ関数やデータ
 ```
-
-# Nearby karaoke website
-
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
-
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/ayana326s-projects/v0-nearby-karaoke-website)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/VmDRHUhMeRz)
 
 ## Overview
 
